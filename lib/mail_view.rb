@@ -25,11 +25,15 @@ class MailView
     path_info = env["PATH_INFO"]
 
     if path_info == "" || path_info == "/"
-      links = self.actions.map do |action|
-        [action, "#{env["SCRIPT_NAME"]}/#{action}"]
+      if self.class.const_defined? 'MAILERS'
+        links = self.class.const_get('MAILERS')
+      else
+        links = self.actions.map do |action|
+          [action, "#{env["SCRIPT_NAME"]}/#{action}"]
+        end
       end
 
-      ok index_template.render(Object.new, :links => links)
+      ok index_template.render(Object.new, :links => links, :script_name => env['SCRIPT_NAME'])
     elsif path_info =~ /([\w_]+)(\.\w+)?$/
       name   = $1
       format = $2 || ".html"

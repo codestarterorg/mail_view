@@ -1,5 +1,30 @@
-<ul>
-<% links.each do |name, link| %>
-  <li><a href="<%= link %>"><%= name %></a></li>
-<% end %>
-</ul>
+<html>
+  <head>
+    <title>Mail Preview</title>
+    <style type="text/css">
+      body {
+        font-family: 'Helvetica Neue';
+        margin: 1em;
+      }
+      dd {
+        margin: 0 0 1em 1em;
+      }
+      a {
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 120%;
+      }
+    </style>
+  </head>
+  <body>
+    <% links.each do |mailer, actions| %>
+      <h1><%= mailer.to_s.camelize %></h1>
+      <dl>
+        <% actions.each do |action, desc| %>
+          <dt><a href="<%= %Q{#{script_name}/#{action}} %>"><%= action.to_s.humanize.titlecase %></a></dt>
+          <dd><%= desc %></dd>
+        <% end %>
+      </dl>
+    <% end %>
+  </body>
+</html>
