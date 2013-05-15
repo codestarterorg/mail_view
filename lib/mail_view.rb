@@ -85,15 +85,19 @@ class MailView
     def render_mail(name, mail, format = nil)
       body_part = mail
 
-      if mail.multipart?
-        content_type = Rack::Mime.mime_type(format)
-        body_part = if mail.respond_to?(:all_parts)
-                      mail.all_parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
-                    else
-                      mail.parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
-                    end
-      end
+      if body_part
+        if mail.multipart?
+          content_type = Rack::Mime.mime_type(format)
+          body_part = if mail.respond_to?(:all_parts)
+                        mail.all_parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
+                      else
+                        mail.parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
+                      end
+        end
 
-      email_template.render(Object.new, :name => name, :mail => mail, :body_part => body_part)
+        email_template.render(Object.new, :name => name, :mail => mail, :body_part => body_part)
+      else
+        "<h1>Not implemented</h1>"
+      end
     end
 end
