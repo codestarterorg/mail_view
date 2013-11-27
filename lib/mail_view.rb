@@ -104,7 +104,7 @@ private
   end
   
   def params
-    HashWithIndifferentAccess[@rack_env['QUERY_STRING'].split('&').collect {|p| p.split('=')}]
+    @params ||= HashWithIndifferentAccess[@rack_env['QUERY_STRING'].split('&').collect {|p| p.split('=')}]
   end
     
 end
