@@ -48,56 +48,63 @@ class MailView
     end
   end
 
-  protected
-    def actions
-      public_methods(false).map(&:to_s).sort - ['call']
-    end
+protected
+  
+  def actions
+    public_methods(false).map(&:to_s).sort - ['call']
+  end
 
-    def email_template
-      Tilt.new(email_template_path)
-    end
+  def email_template
+    Tilt.new(email_template_path)
+  end
 
-    def email_template_path
-      self.class.default_email_template_path
-    end
+  def email_template_path
+    self.class.default_email_template_path
+  end
 
-    def index_template
-      Tilt.new(index_template_path)
-    end
+  def index_template
+    Tilt.new(index_template_path)
+  end
 
-    def index_template_path
-      self.class.default_index_template_path
-    end
+  def index_template_path
+    self.class.default_index_template_path
+  end
 
-  private
-    def ok(body)
-      [200, {"Content-Type" => "text/html"}, [body]]
-    end
+private
+  
+  def ok(body)
+    [200, {"Content-Type" => "text/html"}, [body]]
+  end
 
-    def not_found(pass = false)
-      if pass
-        [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, ["Not Found"]]
-      else
-        [404, {"Content-Type" => "text/html"}, ["Not Found"]]
+  def not_found(pass = false)
+    if pass
+      [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, ["Not Found"]]
+    else
+      [404, {"Content-Type" => "text/html"}, ["Not Found"]]
+    end
+  end
+
+  def render_mail(name, mail, format = nil)
+    body_part = mail
+
+    if body_part
+      if mail.multipart?
+        content_type = Rack::Mime.mime_type(format)
+        body_part = if mail.respond_to?(:all_parts)
+                      mail.all_parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
+                    else
+                      mail.parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
+                    end
       end
+
+      email_template.render(Object.new, :name => name, :mail => mail, :body_part => body_part)
+    else
+      "<h1>Not implemented</h1>"
     end
-
-    def render_mail(name, mail, format = nil)
-      body_part = mail
-
-      if body_part
-        if mail.multipart?
-          content_type = Rack::Mime.mime_type(format)
-          body_part = if mail.respond_to?(:all_parts)
-                        mail.all_parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
-                      else
-                        mail.parts.find { |part| part.content_type.match(content_type) } || mail.parts.first
-                      end
-        end
-
-        email_template.render(Object.new, :name => name, :mail => mail, :body_part => body_part)
-      else
-        "<h1>Not implemented</h1>"
-      end
-    end
+  end
+  
+  def params
+    HashWithIndifferentAccess[@rack_env['QUERY_STRING'].split('&').collect {|p| p.split('=')}]
+  end
+    
 end
