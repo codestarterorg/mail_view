@@ -104,7 +104,7 @@ private
   end
   
   def params
-    @params ||= HashWithIndifferentAccess[@rack_env['QUERY_STRING'].split('&').collect {|p| p.split('=')}]
+    @params ||= HashWithIndifferentAccess.new(Rack::Utils.parse_nested_query(@rack_env['QUERY_STRING']))
   end
     
 end
