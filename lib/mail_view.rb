@@ -4,7 +4,10 @@ require 'tilt'
 require 'rack/mime'
 
 class MailView
+  class NotFound < StandardError; end
+
   autoload :Mapper, 'mail_view/mapper'
+  cattr_reader :c_not_found_template_path
 
   class << self
     def default_email_template_path
@@ -13,6 +16,10 @@ class MailView
 
     def default_index_template_path
       File.expand_path('../mail_view/index.html.erb', __FILE__)
+    end
+
+    def not_found_template_path(path)
+      @@c_not_found_template_path = path
     end
 
     def call(env)
@@ -34,12 +41,23 @@ class MailView
       end
 
       ok index_template.render(Object.new, :links => links, :script_name => env['SCRIPT_NAME'])
+    elsif actions.include? path_info.split('/')[1]
+      action_name = path_info.split('/')[1]
+      begin
+        ok render_mail(action_name, send(action_name), 'html')
+      rescue NotFound
+        not_found
+      end
     elsif path_info =~ /([\w_]+)(\.\w+)?$/
       name   = $1
       format = $2 || ".html"
 
       if actions.include?(name)
-        ok render_mail(name, send(name), format)
+        begin
+          ok render_mail(name, send(name), format)
+        rescue NotFound
+          not_found
+        end
       else
         not_found
       end
@@ -49,7 +67,7 @@ class MailView
   end
 
 protected
-  
+
   def actions
     public_methods(false).map(&:to_s).sort - ['call']
   end
@@ -70,17 +88,23 @@ protected
     self.class.default_index_template_path
   end
 
+  def not_found_template
+    File.read(c_not_found_template_path)
+  end
+
 private
-  
+
   def ok(body)
     [200, {"Content-Type" => "text/html"}, [body]]
   end
 
   def not_found(pass = false)
+    output = not_found_template.nil? ? 'Not Found' : not_found_template
+
     if pass
-      [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, ["Not Found"]]
+      [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, [output]]
     else
-      [404, {"Content-Type" => "text/html"}, ["Not Found"]]
+      [404, {"Content-Type" => "text/html"}, [output]]
     end
   end
 
@@ -102,9 +126,9 @@ private
       "<h1>Not implemented</h1>"
     end
   end
-  
+
   def params
     @params ||= HashWithIndifferentAccess.new(Rack::Utils.parse_nested_query(@rack_env['QUERY_STRING']))
   end
-    
+
 end
