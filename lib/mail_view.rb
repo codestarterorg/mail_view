@@ -7,9 +7,10 @@ class MailView
   class NotFound < StandardError; end
 
   autoload :Mapper, 'mail_view/mapper'
-  cattr_reader :c_not_found_template_path
 
   class << self
+    attr_reader :allow_browse_index
+
     def default_email_template_path
       File.expand_path('../mail_view/email.html.erb', __FILE__)
     end
@@ -18,20 +19,23 @@ class MailView
       File.expand_path('../mail_view/index.html.erb', __FILE__)
     end
 
-    def not_found_template_path(path)
-      @@c_not_found_template_path = path
+    def browse_index(browseable)
+      allow_browse_index = browseable
     end
 
     def call(env)
       new.call(env)
     end
+
   end
+
+  @allow_browse_index = true
 
   def call(env)
     @rack_env = env
     path_info = env["PATH_INFO"]
 
-    if path_info == "" || path_info == "/"
+    if path_info == "" || path_info == "/" and self.class.allow_browse_index
       if self.class.const_defined? 'MAILERS'
         links = self.class.const_get('MAILERS')
       else
@@ -46,7 +50,7 @@ class MailView
       begin
         ok render_mail(action_name, send(action_name), 'html')
       rescue NotFound
-        not_found
+        not_found(true)
       end
     elsif path_info =~ /([\w_]+)(\.\w+)?$/
       name   = $1
@@ -56,7 +60,7 @@ class MailView
         begin
           ok render_mail(name, send(name), format)
         rescue NotFound
-          not_found
+          not_found(true)
         end
       else
         not_found
@@ -88,10 +92,6 @@ protected
     self.class.default_index_template_path
   end
 
-  def not_found_template
-    File.read(c_not_found_template_path)
-  end
-
 private
 
   def ok(body)
@@ -99,12 +99,10 @@ private
   end
 
   def not_found(pass = false)
-    output = not_found_template.nil? ? 'Not Found' : not_found_template
-
     if pass
-      [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, [output]]
+      [404, {"Content-Type" => "text/html", "X-Cascade" => "pass"}, ['Not Found']]
     else
-      [404, {"Content-Type" => "text/html"}, [output]]
+      [404, {"Content-Type" => "text/html"}, ['Not Found']]
     end
   end
 
